@@ -32,8 +32,8 @@ export async function POST(request: Request) {
     body: JSON.stringify(payload),
   })
   const resp = await client.send(cmd)
-  const buf = Buffer.from(await resp.body!.transformToByteArray())
-  const result = JSON.parse(buf.toString('utf-8'))
+  const buf = Buffer.from(arrayBuffer)
+  const result = JSON.parse(buf.toString("utf-8"))
 
   // extrai primeira saída
   const answer = result.results?.[0]?.outputText || null
