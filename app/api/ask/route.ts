@@ -27,7 +27,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // monta o comando de RAG
   const cmd = new RetrieveAndGenerateCommand({
     input: { text: question },
     retrieveAndGenerateConfiguration: {
@@ -41,23 +40,24 @@ export async function POST(req: Request) {
 
   try {
     const resp = await client.send(cmd);
-
-    // body é um BlobAdapter, convertemos para arrayBuffer
     const arrayBuffer = await resp.body!.arrayBuffer();
-    const text = new TextDecoder("utf-8")
+    const txt = new TextDecoder("utf-8")
       .decode(arrayBuffer)
-      // o retorno JSON do Bedrock vem assim:
-      // { inputTextTokenCount: ..., results: [{ outputText: "..."}] }
-      .replace(/^[^{]*/, ""); // remove lixo antes do JSON
+      .replace(/^[^{]*/, "");
 
-    const parsed = JSON.parse(text);
-    const answer = parsed.results?.[0]?.outputText ?? "";
+    const { results } = JSON.parse(txt);
+    const answer = Array.isArray(results) && results[0]?.outputText
+      ? results[0].outputText
+      : "";
 
     return NextResponse.json({ text: answer });
-  } catch (err: any) {
-    console.error("Erro no RAG:", err);
+  } catch (unknownErr) {
+    // evita o `any` e satisfaz o ESLint
+    const message =
+      unknownErr instanceof Error ? unknownErr.message : String(unknownErr);
+    console.error("Erro no RAG:", message);
     return NextResponse.json(
-      { error: err.message ?? "Erro desconhecido" },
+      { error: message },
       { status: 500 }
     );
   }
