@@ -1,61 +1,81 @@
 // app/api/ask/route.ts
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server'
 import {
   BedrockAgentRuntimeClient,
-  RetrieveAndGenerateCommand, 
-} from "@aws-sdk/client-bedrock-agent-runtime";
+  RetrieveAndGenerateCommand,
+  type RetrieveAndGenerateCommandOutput,
+} from '@aws-sdk/client-bedrock-agent-runtime'
 
-const REGION = process.env.AWS_REGION!;
-const KB_ID = process.env.KB_ID!;
-const MODEL_ID = process.env.MODEL_ID!;
+/* ------------------------------------------------------------------ */
+/* 1. Variáveis de ambiente obrigatórias                               */
+/* ------------------------------------------------------------------ */
+const { AWS_REGION, KB_ID, MODEL_ID } = process.env
 
-// validações básicas
-if (!REGION || !KB_ID || !MODEL_ID) {
+if (!AWS_REGION || !KB_ID || !MODEL_ID) {
   throw new Error(
-    "As env vars AWS_REGION, KB_ID e MODEL_ID devem estar definidas"
-  );
+    'Defina AWS_REGION, KB_ID e MODEL_ID nas variáveis de ambiente.',
+  )
 }
 
-const client = new BedrockAgentRuntimeClient({ region: REGION });
+/* ------------------------------------------------------------------ */
+/* 2. Cliente Bedrock Runtime                                          */
+/* ------------------------------------------------------------------ */
+const client = new BedrockAgentRuntimeClient({ region: AWS_REGION })
 
+/* ------------------------------------------------------------------ */
+/* 3. Handler POST                                                     */
+/* ------------------------------------------------------------------ */
 export async function POST(req: Request) {
-  const { question } = await req.json();
-  if (!question || typeof question !== "string") {
+  /* ---------- 3.1  Valida o body ---------- */
+  type AskBody = { question: string }
+
+  let data: AskBody
+  try {
+    data = (await req.json()) as AskBody
+  } catch {
     return NextResponse.json(
-      { error: "Envie um JSON { question: 'sua pergunta' }" },
-      { status: 400 }
-    );
+      { error: 'Corpo mal‑formado. Envie JSON { question: string }.' },
+      { status: 400 },
+    )
   }
 
-  const cmd = new RetrieveAndGenerateCommand({
-    input: { text: question },
+  if (!data.question?.trim()) {
+    return NextResponse.json(
+      { error: 'Campo "question" é obrigatório.' },
+      { status: 400 },
+    )
+  }
+
+  /* ---------- 3.2  Monta o comando ---------- */
+  const command = new RetrieveAndGenerateCommand({
+    input: { text: data.question },
     retrieveAndGenerateConfiguration: {
-      type: "KNOWLEDGE_BASE",
+      type: 'KNOWLEDGE_BASE',
       knowledgeBaseConfiguration: {
         knowledgeBaseId: KB_ID,
         modelArn: MODEL_ID,
       },
     },
-  });
+  })
 
+  /* ---------- 3.3  Chama Bedrock KB ---------- */
   try {
-    const resp = await client.send(cmd);
-    const arrayBuffer = await resp.body!.arrayBuffer();
-    const txt = new TextDecoder("utf-8")
-      .decode(arrayBuffer)
-      .replace(/^[^{]*/, "");
+    const resp: RetrieveAndGenerateCommandOutput = await client.send(command)
 
-    const { results } = JSON.parse(txt);
-    const answer = Array.isArray(results) && results[0]?.outputText
-      ? results[0].outputText
-      : "";
+    // `resp.body` é um ReadableStream<Uint8Array> adaptado.
+    const ab = await resp.body?.arrayBuffer()
+    const rawJson = ab ? new TextDecoder().decode(ab) : '{}'
 
-    return NextResponse.json({ text: answer });
-  } catch (unknownErr) {
-    // evita o `any` e satisfaz o ESLint
-      } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("Erro no RAG:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const { results = [] } = JSON.parse(rawJson) as {
+      results?: { outputText?: string }[]
+    }
+
+    const text = results[0]?.outputText ?? ''
+
+    return NextResponse.json({ text })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[api/ask] erro:', message)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
