@@ -1,51 +1,64 @@
 // app/api/ask/route.ts
-import { NextResponse } from "next/server"
+import { NextResponse } from "next/server";
 import {
-  BedrockRuntimeClient,
-  InvokeModelCommand,
-} from "@aws-sdk/client-bedrock-runtime"
+  BedrockAgentRuntimeClient,
+  RetrieveAndGenerateCommand,
+} from "@aws-sdk/client-bedrock-agent-runtime";
 
-export async function POST(request: Request) {
-  // 1) Extrai a pergunta do body da requisição
-  const { question } = await request.json()
+const REGION = process.env.AWS_REGION!;
+const KB_ID = process.env.KB_ID!;
+const MODEL_ID = process.env.MODEL_ID!;
 
-  // 2) Cria o cliente Bedrock com credenciais da env
-  const client = new BedrockRuntimeClient({
-    region: process.env.AWS_REGION,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-    },
-  })
+// validações básicas
+if (!REGION || !KB_ID || !MODEL_ID) {
+  throw new Error(
+    "As env vars AWS_REGION, KB_ID e MODEL_ID devem estar definidas"
+  );
+}
 
-  // 3) Prepara o comando invoke-model
-  const cmd = new InvokeModelCommand({
-    modelId: process.env.MODEL_ID,
-    contentType: "application/json",
-    body: JSON.stringify({
-      inputText: question,
-      textGenerationConfig: {
-        maxTokenCount: 200,
-        temperature: 0.2,
-        topP: 0.9,
-        stopSequences: [],
+const client = new BedrockAgentRuntimeClient({ region: REGION });
+
+export async function POST(req: Request) {
+  const { question } = await req.json();
+  if (!question || typeof question !== "string") {
+    return NextResponse.json(
+      { error: "Envie um JSON { question: 'sua pergunta' }" },
+      { status: 400 }
+    );
+  }
+
+  // monta o comando de RAG
+  const cmd = new RetrieveAndGenerateCommand({
+    input: { text: question },
+    retrieveAndGenerateConfiguration: {
+      type: "KNOWLEDGE_BASE",
+      knowledgeBaseConfiguration: {
+        knowledgeBaseId: KB_ID,
+        modelArn: MODEL_ID,
       },
-    }),
-  })
+    },
+  });
 
-  // 4) Executa
-  const resp = await client.send(cmd)
+  try {
+    const resp = await client.send(cmd);
 
-  // 5) Usa a Web API Response para ler o corpo como string
-  const rawText = await new Response(resp.body!).text()
+    // body é um BlobAdapter, convertemos para arrayBuffer
+    const arrayBuffer = await resp.body!.arrayBuffer();
+    const text = new TextDecoder("utf-8")
+      .decode(arrayBuffer)
+      // o retorno JSON do Bedrock vem assim:
+      // { inputTextTokenCount: ..., results: [{ outputText: "..."}] }
+      .replace(/^[^{]*/, ""); // remove lixo antes do JSON
 
-  // 6) Faz parse do JSON retornado pelo Bedrock
-  const parsed = JSON.parse(rawText)
+    const parsed = JSON.parse(text);
+    const answer = parsed.results?.[0]?.outputText ?? "";
 
-  // 7) Extrai a saída desejada
-  //    depende do modelo – aqui assumimos a propriedade `results[0].outputText`
-  const text = parsed.results?.[0]?.outputText ?? ""
-
-  // 8) Retorna no formato { text }
-  return NextResponse.json({ text })
+    return NextResponse.json({ text: answer });
+  } catch (err: any) {
+    console.error("Erro no RAG:", err);
+    return NextResponse.json(
+      { error: err.message ?? "Erro desconhecido" },
+      { status: 500 }
+    );
+  }
 }
