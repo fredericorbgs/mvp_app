@@ -7,18 +7,18 @@ import {
 } from '@aws-sdk/client-bedrock-agent-runtime'
 
 /* ------------------------------------------------------------------ */
-/* 1. Variáveis de ambiente obrigatórias                               */
+/* 1. Variáveis de ambiente                                            */
 /* ------------------------------------------------------------------ */
 const { AWS_REGION, KB_ID, MODEL_ID } = process.env
 
 if (!AWS_REGION || !KB_ID || !MODEL_ID) {
   throw new Error(
-    'Defina AWS_REGION, KB_ID e MODEL_ID nas variáveis de ambiente.',
+    'Defina AWS_REGION, KB_ID e MODEL_ID nas env‑vars (Vercel → Settings → Env Vars).',
   )
 }
 
 /* ------------------------------------------------------------------ */
-/* 2. Cliente Bedrock Runtime                                          */
+/* 2. Cliente Bedrock                                                  */
 /* ------------------------------------------------------------------ */
 const client = new BedrockAgentRuntimeClient({ region: AWS_REGION })
 
@@ -26,56 +26,64 @@ const client = new BedrockAgentRuntimeClient({ region: AWS_REGION })
 /* 3. Handler POST                                                     */
 /* ------------------------------------------------------------------ */
 export async function POST(req: Request) {
-  /* ---------- 3.1  Valida o body ---------- */
-  type AskBody = { question: string }
-
-  let data: AskBody
+  /** ---------- 3.1  Valida o body ---------- */
+  interface AskBody {
+    question: string
+  }
+  let body: AskBody
   try {
-    data = (await req.json()) as AskBody
+    body = (await req.json()) as AskBody
   } catch {
     return NextResponse.json(
-      { error: 'Corpo mal‑formado. Envie JSON { question: string }.' },
+      { error: 'Envie JSON { "question": "<texto>" }' },
       { status: 400 },
     )
   }
 
-  if (!data.question?.trim()) {
+  if (!body.question?.trim()) {
     return NextResponse.json(
       { error: 'Campo "question" é obrigatório.' },
       { status: 400 },
     )
   }
 
-  /* ---------- 3.2  Monta o comando ---------- */
-  const command = new RetrieveAndGenerateCommand({
-    input: { text: data.question },
+  /** ---------- 3.2  Monta input p/ AWS ---------- */
+  const input: Parameters<typeof RetrieveAndGenerateCommand>[0] = {
+    input: { text: body.question },
     retrieveAndGenerateConfiguration: {
       type: 'KNOWLEDGE_BASE',
       knowledgeBaseConfiguration: {
         knowledgeBaseId: KB_ID,
         modelArn: MODEL_ID,
+        // (opcional) geração mais “assertiva”:
+        generationConfiguration: {
+          inferenceConfig: {
+            textInferenceConfig: {
+              temperature: 0.2,   // respostas mais determinísticas
+              topP: 0.9,
+              maxTokens: 512,
+              stopSequences: [],  // deixe vazio p/ completar livre
+            },
+          },
+        },
       },
     },
-  })
+  }
 
-  /* ---------- 3.3  Chama Bedrock KB ---------- */
+  /** ---------- 3.3  Chama Bedrock RAG ---------- */
   try {
-    const resp: RetrieveAndGenerateCommandOutput = await client.send(command)
+    const cmd = new RetrieveAndGenerateCommand(input)
+    const resp: RetrieveAndGenerateCommandOutput = await client.send(cmd)
 
-    // `resp.body` é um ReadableStream<Uint8Array> adaptado.
-    const ab = await resp.body?.arrayBuffer()
-    const rawJson = ab ? new TextDecoder().decode(ab) : '{}'
+    // body é um ReadableStream<Uint8Array>. Convertemos para string JSON:
+    const ab = await resp.body!.arrayBuffer()
+    const raw = new TextDecoder().decode(ab)
+    const { output } = JSON.parse(raw) as { output: { text: string } }
 
-    const { results = [] } = JSON.parse(rawJson) as {
-      results?: { outputText?: string }[]
-    }
-
-    const text = results[0]?.outputText ?? ''
-
-    return NextResponse.json({ text })
+    return NextResponse.json({ text: output.text })
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[api/ask] erro:', message)
-    return NextResponse.json({ error: message }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[api/ask] Bedrock erro:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
