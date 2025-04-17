@@ -4,6 +4,7 @@ import {
   BedrockAgentRuntimeClient,
   RetrieveAndGenerateCommand,
   type RetrieveAndGenerateCommandInput,
+  type RetrieveAndGenerateCommandOutput,
 } from '@aws-sdk/client-bedrock-agent-runtime'
 
 /* ------------------------------------------------------------------ */
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     )
   }
 
-  // 3.2 – monta o input usando o tipo oficial do SDK
+  // 3.2 – monta input com o tipo oficial
   const commandInput: RetrieveAndGenerateCommandInput = {
     input: { text: payload.question },
     retrieveAndGenerateConfiguration: {
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
       knowledgeBaseConfiguration: {
         knowledgeBaseId: KB_ID,
         modelArn: MODEL_ID,
-        // opcional: ajusta temperatura, topP, etc
+        // ajustes opcionais para qualidade/factualidade
         generationConfiguration: {
           inferenceConfig: {
             textInferenceConfig: {
@@ -65,25 +66,17 @@ export async function POST(req: Request) {
     },
   }
 
-  const cmd = new RetrieveAndGenerateCommand(commandInput)
-
-  // 3.3 – envia para o Bedrock e lê o response
+  // 3.3 – envia o comando
+  let resp: RetrieveAndGenerateCommandOutput
   try {
-    const resp = await client.send(cmd)
-    // resp.body é um ReadableStream<Uint8Array>
-    const arrayBuffer = await resp.body?.arrayBuffer() ?? new ArrayBuffer(0)
-    const raw = new TextDecoder().decode(arrayBuffer)
-    // parseamos usando interface explícita
-    interface RagResponse {
-      results?: { outputText?: string }[]
-    }
-    const parsed = JSON.parse(raw) as RagResponse
-    const text = parsed.results?.[0]?.outputText ?? ''
-
-    return NextResponse.json({ text })
+    resp = await client.send(new RetrieveAndGenerateCommand(commandInput))
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[api/ask] erro:', msg)
+    console.error('[api/ask] erro no Bedrock:', msg)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
+
+  // 3.4 – extrai o texto diretamente de resp.output.text
+  const text = resp.output?.text ?? ''
+  return NextResponse.json({ text })
 }
