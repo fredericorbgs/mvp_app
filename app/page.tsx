@@ -87,11 +87,11 @@ function FileUpload({ onSuccess }: FileUploadProps) {
   return (
     <Card className="max-w-xl mx-auto">
       <CardContent className="space-y-4 p-6">
-        <Input type="file" onChange={() => setFile(e.target.files?.[0] || null)} />
+        <Input type="file" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFile(e.target.files?.[0] || null)} />
         <Textarea
           placeholder="Descrição (opcional)"
           value={descricao}
-          onChange={() => setDescricao(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDescricao(e.target.value)}
           rows={3}
         />
         <Button onClick={handleUpload} disabled={loading} className="w-full">
@@ -199,7 +199,7 @@ function ChatRAG() {
         <Textarea
           placeholder="Digite sua pergunta…"
           value={question}
-          onChange={() => setQuestion(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuestion(e.target.value)}
           rows={3}
         />
         <Button onClick={ask} disabled={loading} className="w-full">
