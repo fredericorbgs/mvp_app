@@ -53,12 +53,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ text: answer });
   } catch (unknownErr) {
     // evita o `any` e satisfaz o ESLint
-    const message =
-      unknownErr instanceof Error ? unknownErr.message : String(unknownErr);
-    console.error("Erro no RAG:", message);
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
+      } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Erro no RAG:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
