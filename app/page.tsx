@@ -5,6 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import React from 'react'
+
+interface FileUploadProps {
+  onSuccess?: () => void;
+}
+
 /**
  * ------------------------------------------------------------------
  * MVP – File‑upload + RAG chat UI (React + Tailwind + shadcn/ui)
@@ -51,7 +56,7 @@ export default function MVPApp() {
 }
 
 /* ------------------------------------------------------------------ */
-function FileUpload({ onSuccess }) {
+function FileUpload({ onSuccess }: FileUploadProps) {
   const [file, setFile] = useState(null);
   const [descricao, setDescricao] = useState("");
   const [loading, setLoading] = useState(false);
