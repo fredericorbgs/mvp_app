@@ -71,7 +71,8 @@ function FileUpload({ onSuccess }) {
       setFile(null);
       setDescricao("");
       onSuccess?.();
-    } catch () {
+    } catch (err) {
+      console.error(err);
       setMsg("Erro ao enviar arquivo");
     } finally {
       setLoading(false);
@@ -179,7 +180,8 @@ function ChatRAG() {
       });
       const json = await res.json();
       setAnswer(json.text || JSON.stringify(json));
-    } catch () {
+    } catch (err) {
+      console.error(err);
       setAnswer("Erro ao consultar.");
     } finally {
       setLoading(false);
