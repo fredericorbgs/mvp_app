@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import {
   BedrockAgentRuntimeClient,
-  RetrieveAndGenerateCommand,
+  RetrieveAndGenerateCommand, 
 } from "@aws-sdk/client-bedrock-agent-runtime";
 
 const REGION = process.env.AWS_REGION!;
