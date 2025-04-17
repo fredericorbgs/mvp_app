@@ -1,46 +1,43 @@
-'use client'
-import React, { useState, useEffect, ChangeEvent } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 
-/**
- * State types
- */
-interface FileUploadProps {
-  onSuccess?: () => void
-}
+'use client'
+import React, { useState, useEffect, ChangeEvent } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+
+// Define the valid tab keys
+type Tab = 'upload' | 'files' | 'chat';
 
 interface FileMeta {
-  s3_key: string
-  nome: string
-  descricao?: string
-  dataUpload: string
-  tamanho: number
+  s3_key: string;
+  nome: string;
+  descricao?: string;
+  dataUpload: string;
+  tamanho: number;
 }
 
 interface AskResponse {
-  text: string
+  text: string;
 }
 
-/**
- * ------------------------------------------------------------------
- * MVP – File‑upload + RAG chat UI (React + Tailwind + shadcn/ui)
- * ------------------------------------------------------------------
- */
+interface FileUploadProps {
+  onSuccess?: () => void;
+}
+
 export default function MVPApp() {
-  const [activeTab, setActiveTab] = useState<'upload' | 'files' | 'chat'>('upload')
+  const [activeTab, setActiveTab] = useState<Tab>('upload');
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'upload', label: 'Enviar Arquivo' },
+    { id: 'files', label: 'Meus Arquivos' },
+    { id: 'chat', label: 'Perguntar à IA' },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 text-gray-900">
-      <h1 className="text-3xl font-bold mb-6">Rivo MVP – Upload & Ask</h1>
+      <h1 className="text-3xl font-bold mb-6">Rivo MVP – Upload &amp; Ask</h1>
       <div className="flex space-x-2 mb-4">
-        {[
-          { id: 'upload', label: 'Enviar Arquivo' },
-          { id: 'files', label: 'Meus Arquivos' },
-          { id: 'chat', label: 'Perguntar à IA' }
-        ].map((t) => (
+        {tabs.map((t) => (
           <Button
             key={t.id}
             variant={activeTab === t.id ? 'default' : 'outline'}
@@ -56,56 +53,54 @@ export default function MVPApp() {
       {activeTab === 'files' && <FileList />}
       {activeTab === 'chat' && <ChatRAG />}
     </div>
-  )
+  );
 }
 
-/* ------------------------------------------------------------------ */
 function FileUpload({ onSuccess }: FileUploadProps) {
-  const [file, setFile] = useState<File | null>(null)
-  const [descricao, setDescricao] = useState<string>('')
-  const [loading, setLoading] = useState<boolean>(false)
-  const [msg, setMsg] = useState<string>('\u00A0')
+  const [file, setFile] = useState<File | null>(null);
+  const [descricao, setDescricao] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('\u00A0');
 
   const handleUpload = async () => {
-    if (!file) {
-      setMsg('Selecione um arquivo.')
-      return
-    }
-    setLoading(true)
-    setMsg('Enviando…')
+    if (!file) return setMsg('Selecione um arquivo.');
+    setLoading(true);
+    setMsg('Enviando…');
     try {
-      const form = new FormData()
-      form.append('file', file)
-      form.append('descricao', descricao)
+      const form = new FormData();
+      form.append('file', file);
+      form.append('descricao', descricao);
 
-      await fetch('/api/upload', { method: 'POST', body: form })
-      setMsg('✅ Upload concluído')
-      setFile(null)
-      setDescricao('')
-      onSuccess?.()
+      await fetch('/api/upload', { method: 'POST', body: form });
+      setMsg('✅ Upload concluído');
+      setFile(null);
+      setDescricao('');
+      onSuccess?.();
     } catch (err) {
-      console.error(err)
-      setMsg('Erro ao enviar arquivo')
+      console.error(err);
+      setMsg('Erro ao enviar arquivo');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const picked = e.target.files?.[0] || null;
+    setFile(picked);
+  };
+
+  const handleDescChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setDescricao(e.target.value);
+  };
 
   return (
     <Card className="max-w-xl mx-auto">
       <CardContent className="space-y-4 p-6">
-        <Input
-          type="file"
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setFile(e.target.files?.[0] ?? null)
-          }
-        />
+        <Input type="file" onChange={handleFileChange} />
         <Textarea
           placeholder="Descrição (opcional)"
           value={descricao}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-            setDescricao(e.target.value)
-          }
+          onChange={handleDescChange}
           rows={3}
         />
         <Button onClick={handleUpload} disabled={loading} className="w-full">
@@ -114,32 +109,29 @@ function FileUpload({ onSuccess }: FileUploadProps) {
         <p className="text-sm text-center text-gray-600">{msg}</p>
       </CardContent>
     </Card>
-  )
+  );
 }
 
-/* ------------------------------------------------------------------ */
 function FileList() {
-  const [files, setFiles] = useState<FileMeta[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
+  const [files, setFiles] = useState<FileMeta[]>([]);
+  const [loading, setLoading] = useState(true);
 
   async function fetchFiles() {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await fetch('/api/files')
-      const json: FileMeta[] = await res.json()
-      setFiles(json)
-    } catch (err) {
-      console.error(err)
+      const res = await fetch('/api/files');
+      const json = (await res.json()) as FileMeta[];
+      setFiles(json);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    fetchFiles()
-  }, [])
+    fetchFiles();
+  }, []);
 
-  if (loading) return <p>Carregando…</p>
+  if (loading) return <p>Carregando…</p>;
   return (
     <Card className="max-w-4xl mx-auto">
       <CardContent className="p-0 overflow-x-auto">
@@ -157,24 +149,15 @@ function FileList() {
             {files.map((f) => (
               <tr key={f.s3_key} className="odd:bg-gray-50">
                 <td className="px-3 py-2">{f.nome}</td>
-                <td className="px-3 py-2">{f.descricao ?? '-'}</td>
-                <td className="px-3 py-2">
-                  {new Date(f.dataUpload).toLocaleString()}
-                </td>
-                <td className="px-3 py-2">
-                  {(f.tamanho / 1024).toFixed(1)}
-                </td>
+                <td className="px-3 py-2">{f.descricao || '-'}</td>
+                <td className="px-3 py-2">{new Date(f.dataUpload).toLocaleString()}</td>
+                <td className="px-3 py-2">{(f.tamanho / 1024).toFixed(1)}</td>
                 <td className="px-3 py-2">
                   <Button
                     size="sm"
-                    onClick={() =>
-                      window.open(
-                        `/api/download?key=${encodeURIComponent(
-                          f.s3_key
-                        )}`,
-                        '_blank'
-                      )
-                    }
+                    onClick={() => window.open(`/api/download?key=${encodeURIComponent(
+                      f.s3_key
+                    )}`, '_blank')}
                   >
                     Baixar
                   </Button>
@@ -185,36 +168,37 @@ function FileList() {
         </table>
       </CardContent>
     </Card>
-  )
+  );
 }
 
-/* ------------------------------------------------------------------ */
 function ChatRAG() {
-  const [question, setQuestion] = useState<string>('')
-  const [answer, setAnswer] = useState<string>(
-    'Pergunte algo e a IA responderá aqui…'
-  )
-  const [loading, setLoading] = useState<boolean>(false)
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('Pergunte algo e a IA responderá aqui…');
+  const [loading, setLoading] = useState(false);
 
   const ask = async () => {
-    if (!question.trim()) return
-    setLoading(true)
-    setAnswer('Consultando KB…')
+    if (!question.trim()) return;
+    setLoading(true);
+    setAnswer('Consultando KB…');
     try {
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question })
-      })
-      const json: AskResponse = await res.json()
-      setAnswer(json.text || JSON.stringify(json))
+        body: JSON.stringify({ question }),
+      });
+      const json = (await res.json()) as AskResponse;
+      setAnswer(json.text);
     } catch (err) {
-      console.error(err)
-      setAnswer('Erro ao consultar.')
+      console.error(err);
+      setAnswer('Erro ao consultar.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  const handleQuestionChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setQuestion(e.target.value);
+  };
 
   return (
     <Card className="max-w-2xl mx-auto">
@@ -222,9 +206,7 @@ function ChatRAG() {
         <Textarea
           placeholder="Digite sua pergunta…"
           value={question}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-            setQuestion(e.target.value)
-          }
+          onChange={handleQuestionChange}
           rows={3}
         />
         <Button onClick={ask} disabled={loading} className="w-full">
@@ -235,5 +217,5 @@ function ChatRAG() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
