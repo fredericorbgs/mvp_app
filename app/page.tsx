@@ -71,7 +71,7 @@ function FileUpload({ onSuccess }) {
       setFile(null);
       setDescricao("");
       onSuccess?.();
-    } catch (e) {
+    } catch (_e) {
       setMsg("Erro ao enviar arquivo");
     } finally {
       setLoading(false);
@@ -81,11 +81,11 @@ function FileUpload({ onSuccess }) {
   return (
     <Card className="max-w-xl mx-auto">
       <CardContent className="space-y-4 p-6">
-        <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        <Input type="file" onChange={(_e) => setFile(e.target.files?.[0] || null)} />
         <Textarea
           placeholder="Descrição (opcional)"
           value={descricao}
-          onChange={(e) => setDescricao(e.target.value)}
+          onChange={(_e) => setDescricao(e.target.value)}
           rows={3}
         />
         <Button onClick={handleUpload} disabled={loading} className="w-full">
@@ -179,7 +179,7 @@ function ChatRAG() {
       });
       const json = await res.json();
       setAnswer(json.text || JSON.stringify(json));
-    } catch (e) {
+    } catch (_e) {
       setAnswer("Erro ao consultar.");
     } finally {
       setLoading(false);
@@ -192,7 +192,7 @@ function ChatRAG() {
         <Textarea
           placeholder="Digite sua pergunta…"
           value={question}
-          onChange={(e) => setQuestion(e.target.value)}
+          onChange={(_e) => setQuestion(e.target.value)}
           rows={3}
         />
         <Button onClick={ask} disabled={loading} className="w-full">
