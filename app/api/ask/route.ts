@@ -6,13 +6,13 @@ import {
   type RetrieveAndGenerateCommandInput,
 } from '@aws-sdk/client-bedrock-agent-runtime'
 
-const { AWS_REGION, KB_ID, MODEL_ID } = process.env
+const { REGION, KB_ID, MODEL_ID } = process.env
 
-if (!AWS_REGION || !KB_ID || !MODEL_ID) {
-  throw new Error('Defina AWS_REGION, KB_ID e MODEL_ID nas env vars.')
+if (!REGION || !KB_ID || !MODEL_ID) {
+  throw new Error('Defina REGION, KB_ID e MODEL_ID nas env vars.')
 }
 
-const bedrock = new BedrockAgentRuntimeClient({ region: AWS_REGION })
+const bedrock = new BedrockAgentRuntimeClient({ region: REGION })
 
 export async function POST(req: Request) {
   interface AskBody { question: string }
