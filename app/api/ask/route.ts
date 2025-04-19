@@ -1,66 +1,60 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextResponse } from 'next/server'
 import {
   BedrockAgentRuntimeClient,
   RetrieveAndGenerateCommand,
-  type RetrieveAndGenerateCommandInput,
+  type RetrieveAndGenerateCommandOutput,
 } from '@aws-sdk/client-bedrock-agent-runtime'
 
-const { REGION, KB_ID, MODEL_ID } = process.env
+const client = new BedrockAgentRuntimeClient({
+  region: process.env.REGION!,
+  credentials: {
+    accessKeyId: process.env.ACCESS_KEY_ID!,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY!,
+  },
+})
 
-if (!REGION || !KB_ID || !MODEL_ID) {
-  throw new Error('Defina REGION, KB_ID e MODEL_ID nas env vars.')
+interface AskBody {
+  question: string
 }
 
-const bedrock = new BedrockAgentRuntimeClient({ region: REGION })
-
 export async function POST(req: Request) {
-  interface AskBody { question: string }
-  let data: AskBody
+  const { question } = (await req.json()) as AskBody
 
-  try {
-    data = await req.json()
-  } catch {
-    return NextResponse.json(
-      { error: 'JSON mal‑formado. Use {"question": "..."}' },
-      { status: 400 },
-    )
+  if (!question || !question.trim()) {
+    return NextResponse.json({ error: 'Pergunta inválida.' }, { status: 400 })
   }
 
-  if (!data.question?.trim()) {
-    return NextResponse.json(
-      { error: 'Campo "question" é obrigatório.' },
-      { status: 400 },
-    )
-  }
-
-  const input: RetrieveAndGenerateCommandInput = {
-    input: { text: data.question },
+  const cmd = new RetrieveAndGenerateCommand({
+    input: { text: question },
     retrieveAndGenerateConfiguration: {
       type: 'KNOWLEDGE_BASE',
       knowledgeBaseConfiguration: {
-        knowledgeBaseId: KB_ID,
-        modelArn: MODEL_ID,
+        knowledgeBaseId: process.env.KB_ID!,
+        modelArn: process.env.MODEL_ID!,
         generationConfiguration: {
           inferenceConfig: {
             textInferenceConfig: {
               temperature: 0.2,
               topP: 0.9,
-              maxTokens: 512,
+              maxTokens: 1024,
+              stopSequences: [],
             },
           },
         },
       },
     },
-  }
+  })
 
   try {
-    const { output } = await bedrock.send(new RetrieveAndGenerateCommand(input))
+    const resp: RetrieveAndGenerateCommandOutput = await client.send(cmd)
+    const ab = await resp.body?.arrayBuffer()
+    const raw = ab ? new TextDecoder().decode(ab) : '{}'
+    const parsed = JSON.parse(raw) as { output?: { text?: string } }
 
-    return NextResponse.json({ text: output?.text ?? '' })
+    return NextResponse.json({ text: parsed.output?.text ?? '' })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[api/ask] erro:', msg)
+    console.error('[ask] Erro Bedrock:', msg)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
