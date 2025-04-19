@@ -1,8 +1,10 @@
 import { defineBackend } from "@aws-amplify/backend";
-import { storage } from "./storage/resource";
-import { ask } from "./ask/resource";
+import { uploadFile } from "./functions/uploadFile/resource";
+import { listFiles } from "./functions/listFiles/resource";
+import { askRAG } from "./functions/askRAG/resource";
 
 export const backend = defineBackend({
-  storage,
-  ask,
+  uploadFile,
+  listFiles,
+  askRAG,
 });
