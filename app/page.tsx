@@ -1,14 +1,17 @@
-
-'use client'
+'use client';
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
-// Define the valid tab keys
+// se você usar Amplify ou API Gateway, aponte esse BASE_URL em .env
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+
+// Define as abas válidas
 type Tab = 'upload' | 'files' | 'chat';
 
+// Metadados de arquivo que seu /api/files deve retornar
 interface FileMeta {
   s3_key: string;
   nome: string;
@@ -17,6 +20,7 @@ interface FileMeta {
   tamanho: number;
 }
 
+// Formato de resposta do seu /api/ask
 interface AskResponse {
   text: string;
 }
@@ -27,6 +31,7 @@ interface FileUploadProps {
 
 export default function MVPApp() {
   const [activeTab, setActiveTab] = useState<Tab>('upload');
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'upload', label: 'Enviar Arquivo' },
     { id: 'files', label: 'Meus Arquivos' },
@@ -36,6 +41,8 @@ export default function MVPApp() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 text-gray-900">
       <h1 className="text-3xl font-bold mb-6">Rivo MVP – Upload &amp; Ask</h1>
+
+      {/* Navegação */}
       <div className="flex space-x-2 mb-4">
         {tabs.map((t) => (
           <Button
@@ -49,6 +56,7 @@ export default function MVPApp() {
         ))}
       </div>
 
+      {/* Conteúdo das abas */}
       {activeTab === 'upload' && <FileUpload onSuccess={() => setActiveTab('files')} />}
       {activeTab === 'files' && <FileList />}
       {activeTab === 'chat' && <ChatRAG />}
@@ -62,16 +70,34 @@ function FileUpload({ onSuccess }: FileUploadProps) {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('\u00A0');
 
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setFile(e.target.files?.[0] ?? null);
+  };
+
+  const handleDescChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setDescricao(e.target.value);
+  };
+
   const handleUpload = async () => {
-    if (!file) return setMsg('Selecione um arquivo.');
+    if (!file) {
+      setMsg('Selecione um arquivo.');
+      return;
+    }
+
     setLoading(true);
     setMsg('Enviando…');
+
     try {
       const form = new FormData();
       form.append('file', file);
       form.append('descricao', descricao);
 
-      await fetch('/api/upload', { method: 'POST', body: form });
+      const res = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: form,
+      });
+      if (!res.ok) throw new Error(`Upload falhou (${res.status})`);
+
       setMsg('✅ Upload concluído');
       setFile(null);
       setDescricao('');
@@ -82,15 +108,6 @@ function FileUpload({ onSuccess }: FileUploadProps) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const picked = e.target.files?.[0] || null;
-    setFile(picked);
-  };
-
-  const handleDescChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    setDescricao(e.target.value);
   };
 
   return (
@@ -115,23 +132,27 @@ function FileUpload({ onSuccess }: FileUploadProps) {
 function FileList() {
   const [files, setFiles] = useState<FileMeta[]>([]);
   const [loading, setLoading] = useState(true);
-
-  async function fetchFiles() {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/files');
-      const json = (await res.json()) as FileMeta[];
-      setFiles(json);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchFiles();
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/files`);
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        setFiles((await res.json()) as FileMeta[]);
+      } catch (err: any) {
+        console.error(err);
+        setError('Falha ao carregar arquivos.');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   if (loading) return <p>Carregando…</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
+
   return (
     <Card className="max-w-4xl mx-auto">
       <CardContent className="p-0 overflow-x-auto">
@@ -150,14 +171,23 @@ function FileList() {
               <tr key={f.s3_key} className="odd:bg-gray-50">
                 <td className="px-3 py-2">{f.nome}</td>
                 <td className="px-3 py-2">{f.descricao || '-'}</td>
-                <td className="px-3 py-2">{new Date(f.dataUpload).toLocaleString()}</td>
-                <td className="px-3 py-2">{(f.tamanho / 1024).toFixed(1)}</td>
+                <td className="px-3 py-2">
+                  {new Date(f.dataUpload).toLocaleString()}
+                </td>
+                <td className="px-3 py-2">
+                  {(f.tamanho / 1024).toFixed(1)}
+                </td>
                 <td className="px-3 py-2">
                   <Button
                     size="sm"
-                    onClick={() => window.open(`/api/download?key=${encodeURIComponent(
-                      f.s3_key
-                    )}`, '_blank')}
+                    onClick={() =>
+                      window.open(
+                        `${API_BASE_URL}/download?key=${encodeURIComponent(
+                          f.s3_key
+                        )}`,
+                        '_blank'
+                      )
+                    }
                   >
                     Baixar
                   </Button>
@@ -176,16 +206,24 @@ function ChatRAG() {
   const [answer, setAnswer] = useState('Pergunte algo e a IA responderá aqui…');
   const [loading, setLoading] = useState(false);
 
+  const handleQuestionChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setQuestion(e.target.value);
+  };
+
   const ask = async () => {
     if (!question.trim()) return;
+
     setLoading(true);
     setAnswer('Consultando KB…');
+
     try {
-      const res = await fetch('/api/ask', {
+      const res = await fetch(`${API_BASE_URL}/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question }),
       });
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+
       const json = (await res.json()) as AskResponse;
       setAnswer(json.text);
     } catch (err) {
@@ -194,10 +232,6 @@ function ChatRAG() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuestionChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    setQuestion(e.target.value);
   };
 
   return (
