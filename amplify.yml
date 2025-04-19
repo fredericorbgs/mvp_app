@@ -8,7 +8,7 @@ frontend:
       commands:
         - npm run build
   artifacts:
-    # Next.js 15 com Turbopack já gera tudo em .next/output
+    # Next.js 15 + Turbopack
     baseDirectory: .next/output/public
     files:
       - '**/*'
