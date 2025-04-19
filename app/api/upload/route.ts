@@ -1,38 +1,37 @@
-/* eslint-env node */
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { NextResponse } from 'next/server'
-import {
-  S3Client,
-  PutObjectCommand,
-  type PutObjectCommandInput,
-} from '@aws-sdk/client-s3'
 
-const { REGION, S3_BUCKET_NAME } = process.env
-
-if (!REGION || !S3_BUCKET_NAME) {
-  throw new Error('Defina REGION e S3_BUCKET_NAME nas env vars.')
-}
-
-const s3 = new S3Client({ region: REGION })
+const s3 = new S3Client({
+  region: process.env.REGION!,
+  credentials: {
+    accessKeyId: process.env.ACCESS_KEY_ID!,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY!,
+  },
+})
 
 export async function POST(req: Request) {
-  const form = await req.formData()
-  const file = form.get('file')
+  const formData = await req.formData()
+  const file = formData.get('file') as File
+  const descricao = formData.get('descricao')?.toString() || ''
 
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: 'Envie multipart‑form com campo "file".' }, { status: 400 })
+  if (!file || !file.name) {
+    return NextResponse.json({ error: 'Arquivo inválido' }, { status: 400 })
   }
 
-  const key = `uploads/${Date.now()}-${file.name}`
+  const s3Key = `${Date.now()}_${file.name}`
 
-  const body = Buffer.from(await file.arrayBuffer())
-  const params: PutObjectCommandInput = {
-    Bucket: S3_BUCKET_NAME,
-    Key: key,
-    Body: body,
-    ContentType: file.type || 'application/octet-stream',
-  }
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME!,
+      Key: s3Key,
+      Body: Buffer.from(await file.arrayBuffer()),
+      Metadata: {
+        descricao,
+        nome: file.name,
+        uploadDate: new Date().toISOString(),
+      },
+    })
+  )
 
-  await s3.send(new PutObjectCommand(params))
-
-  return NextResponse.json({ key })
+  return NextResponse.json({ message: 'Upload bem-sucedido' })
 }
