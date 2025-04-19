@@ -2,16 +2,17 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
-// se você usar Amplify ou API Gateway, aponte esse BASE_URL em .env
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+const API = process.env.NEXT_PUBLIC_API_BASE_URL!;
+if (!API) {
+  throw new Error(
+    'Defina NEXT_PUBLIC_API_BASE_URL no .env (ex: https://<api>.execute-api…).'
+  );
+}
 
-// Define as abas válidas
 type Tab = 'upload' | 'files' | 'chat';
 
-// Metadados de arquivo que seu /api/files deve retornar
 interface FileMeta {
   s3_key: string;
   nome: string;
@@ -20,7 +21,6 @@ interface FileMeta {
   tamanho: number;
 }
 
-// Formato de resposta do seu /api/ask
 interface AskResponse {
   text: string;
 }
@@ -31,20 +31,17 @@ interface FileUploadProps {
 
 export default function MVPApp() {
   const [activeTab, setActiveTab] = useState<Tab>('upload');
-
   const tabs: { id: Tab; label: string }[] = [
     { id: 'upload', label: 'Enviar Arquivo' },
-    { id: 'files', label: 'Meus Arquivos' },
-    { id: 'chat', label: 'Perguntar à IA' },
+    { id: 'files',  label: 'Meus Arquivos' },
+    { id: 'chat',   label: 'Perguntar à IA' },
   ];
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 text-gray-900">
       <h1 className="text-3xl font-bold mb-6">Rivo MVP – Upload &amp; Ask</h1>
-
-      {/* Navegação */}
       <div className="flex space-x-2 mb-4">
-        {tabs.map((t) => (
+        {tabs.map(t => (
           <Button
             key={t.id}
             variant={activeTab === t.id ? 'default' : 'outline'}
@@ -56,10 +53,9 @@ export default function MVPApp() {
         ))}
       </div>
 
-      {/* Conteúdo das abas */}
       {activeTab === 'upload' && <FileUpload onSuccess={() => setActiveTab('files')} />}
-      {activeTab === 'files' && <FileList />}
-      {activeTab === 'chat' && <ChatRAG />}
+      {activeTab === 'files'  && <FileList />}
+      {activeTab === 'chat'   && <ChatRAG />}
     </div>
   );
 }
@@ -73,7 +69,6 @@ function FileUpload({ onSuccess }: FileUploadProps) {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFile(e.target.files?.[0] ?? null);
   };
-
   const handleDescChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setDescricao(e.target.value);
   };
@@ -83,21 +78,18 @@ function FileUpload({ onSuccess }: FileUploadProps) {
       setMsg('Selecione um arquivo.');
       return;
     }
-
     setLoading(true);
     setMsg('Enviando…');
-
     try {
       const form = new FormData();
       form.append('file', file);
       form.append('descricao', descricao);
 
-      const res = await fetch(`${API_BASE_URL}/upload`, {
+      const res = await fetch(`${API}/upload`, {
         method: 'POST',
         body: form,
       });
-      if (!res.ok) throw new Error(`Upload falhou (${res.status})`);
-
+      if (!res.ok) throw new Error(`Status ${res.status}`);
       setMsg('✅ Upload concluído');
       setFile(null);
       setDescricao('');
@@ -113,7 +105,12 @@ function FileUpload({ onSuccess }: FileUploadProps) {
   return (
     <Card className="max-w-xl mx-auto">
       <CardContent className="space-y-4 p-6">
-        <Input type="file" onChange={handleFileChange} />
+        {/* input nativo para file */}
+        <input
+          type="file"
+          onChange={handleFileChange}
+          className="block w-full text-sm file:py-2 file:px-4 file:rounded file:border file:border-gray-300"
+        />
         <Textarea
           placeholder="Descrição (opcional)"
           value={descricao}
@@ -138,9 +135,9 @@ function FileList() {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/files`);
+        const res = await fetch(`${API}/files`);
         if (!res.ok) throw new Error(`Status ${res.status}`);
-        setFiles((await res.json()) as FileMeta[]);
+        setFiles(await res.json());
       } catch (err: any) {
         console.error(err);
         setError('Falha ao carregar arquivos.');
@@ -151,7 +148,7 @@ function FileList() {
   }, []);
 
   if (loading) return <p>Carregando…</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (error)   return <p className="text-red-500">{error}</p>;
 
   return (
     <Card className="max-w-4xl mx-auto">
@@ -159,15 +156,13 @@ function FileList() {
         <table className="min-w-full text-sm">
           <thead className="bg-gray-200">
             <tr>
-              {['Nome', 'Descrição', 'Data', 'Tamanho (KB)', 'Ações'].map((h) => (
-                <th key={h} className="px-3 py-2 text-left font-semibold">
-                  {h}
-                </th>
+              {['Nome','Descrição','Data','Tamanho (KB)','Ações'].map(h => (
+                <th key={h} className="px-3 py-2 text-left font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {files.map((f) => (
+            {files.map(f => (
               <tr key={f.s3_key} className="odd:bg-gray-50">
                 <td className="px-3 py-2">{f.nome}</td>
                 <td className="px-3 py-2">{f.descricao || '-'}</td>
@@ -175,16 +170,15 @@ function FileList() {
                   {new Date(f.dataUpload).toLocaleString()}
                 </td>
                 <td className="px-3 py-2">
-                  {(f.tamanho / 1024).toFixed(1)}
+                  {(f.tamanho/1024).toFixed(1)}
                 </td>
                 <td className="px-3 py-2">
                   <Button
                     size="sm"
                     onClick={() =>
                       window.open(
-                        `${API_BASE_URL}/download?key=${encodeURIComponent(
-                          f.s3_key
-                        )}`,
+                        // endpoint de download que deve devolver URL pré‑assinada
+                        `${API}/download?key=${encodeURIComponent(f.s3_key)}`,
                         '_blank'
                       )
                     }
@@ -203,27 +197,20 @@ function FileList() {
 
 function ChatRAG() {
   const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState('Pergunte algo e a IA responderá aqui…');
-  const [loading, setLoading] = useState(false);
-
-  const handleQuestionChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    setQuestion(e.target.value);
-  };
+  const [answer,   setAnswer]   = useState('Pergunte algo e a IA responderá aqui…');
+  const [loading,  setLoading]  = useState(false);
 
   const ask = async () => {
     if (!question.trim()) return;
-
     setLoading(true);
     setAnswer('Consultando KB…');
-
     try {
-      const res = await fetch(`${API_BASE_URL}/ask`, {
+      const res = await fetch(`${API}/ask`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type':'application/json' },
         body: JSON.stringify({ question }),
       });
       if (!res.ok) throw new Error(`Status ${res.status}`);
-
       const json = (await res.json()) as AskResponse;
       setAnswer(json.text);
     } catch (err) {
@@ -240,7 +227,7 @@ function ChatRAG() {
         <Textarea
           placeholder="Digite sua pergunta…"
           value={question}
-          onChange={handleQuestionChange}
+          onChange={e => setQuestion(e.target.value)}
           rows={3}
         />
         <Button onClick={ask} disabled={loading} className="w-full">
