@@ -1,31 +1,39 @@
+import { S3Client, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { NextResponse } from 'next/server'
-import {
-  S3Client,
-  ListObjectsV2Command,
-  type _Object
-} from '@aws-sdk/client-s3'
 
-const { REGION, S3_BUCKET_NAME } = process.env
-
-if (!REGION || !S3_BUCKET_NAME) {
-  throw new Error('Defina REGION e S3_BUCKET_NAME nas env vars.')
-}
-
-const s3 = new S3Client({ region: REGION })
+const s3 = new S3Client({
+  region: process.env.REGION!,
+  credentials: {
+    accessKeyId: process.env.ACCESS_KEY_ID!,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY!,
+  },
+})
 
 export async function GET() {
-  const { Contents = [] } = await s3.send(
-    new ListObjectsV2Command({ Bucket: S3_BUCKET_NAME, Prefix: 'uploads/' }),
+  const list = await s3.send(
+    new ListObjectsV2Command({
+      Bucket: process.env.S3_BUCKET_NAME!,
+    })
   )
 
-  type Obj = Required<_Object>
+  const files = await Promise.all(
+    (list.Contents || []).map(async (item) => {
+      const head = await s3.send(
+        new HeadObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME!,
+          Key: item.Key!,
+        })
+      )
 
-  const files = (Contents as Obj[]).map((o) => ({
-    key: o.Key!,
-    name: o.Key!.split('/').pop()!,
-    size: o.Size ?? 0,
-    lastModified: o.LastModified?.toISOString() ?? '',
-  }))
+      return {
+        s3_key: item.Key,
+        nome: head.Metadata?.nome || item.Key,
+        descricao: head.Metadata?.descricao || '-',
+        dataUpload: head.Metadata?.uploaddate || item.LastModified?.toISOString() || '',
+        tamanho: item.Size,
+      }
+    })
+  )
 
   return NextResponse.json(files)
 }
