@@ -3,13 +3,14 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        - nvm install 20
+        - nvm use 20
+        - npm ci --legacy-peer-deps   # evita travamentos de React 19
     build:
       commands:
-        # Next.js 15 – cria artefactos standalone + static
-        - npm run build
+        - npm run build               # will produce /out
   artifacts:
-    baseDirectory: .next
+    baseDirectory: out
     files:
       - '**/*'
   cache:
