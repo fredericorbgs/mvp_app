@@ -6,11 +6,10 @@ frontend:
         - npm ci
     build:
       commands:
+        # Next.js 15 – cria artefactos standalone + static
         - npm run build
-  # amplify.yml  (trecho)
   artifacts:
--   baseDirectory: .next/output/public
-+   baseDirectory: out
+    baseDirectory: .next
     files:
       - '**/*'
   cache:
