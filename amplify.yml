@@ -7,9 +7,10 @@ frontend:
     build:
       commands:
         - npm run build
+  # amplify.yml  (trecho)
   artifacts:
-    # Next.js 15 + Turbopack
-    baseDirectory: .next/output/public
+-   baseDirectory: .next/output/public
++   baseDirectory: out
     files:
       - '**/*'
   cache:
