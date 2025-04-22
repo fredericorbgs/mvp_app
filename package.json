@@ -2,11 +2,14 @@
   "name": "mvp_app",
   "version": "0.1.0",
   "private": true,
- "scripts": {
-  "dev": "next dev",
-  "build": "next build && next export",
-  "start": "serve out"
-},
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && next export",
+    "start": "serve out"
+  },
   "dependencies": {
     "@aws-sdk/client-bedrock-agent-runtime": "^3.787.0",
     "@aws-sdk/client-bedrock-runtime": "^3.787.0",
