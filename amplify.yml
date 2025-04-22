@@ -1,19 +1,21 @@
 version: 1
-frontend:
-  framework: nextjs          
-  phases:
-    preBuild:
-      commands:
-        - nvm install 20
-        - nvm use 20
-        - npm ci --legacy-peer-deps
-    build:
-      commands:
-        - npm run build    
-  artifacts:
-    baseDirectory: out      
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - node_modules/**/*
+applications:
+  - appRoot: .
+    frontend:
+      framework: nextjs
+      phases:
+        preBuild:
+          commands:
+            - nvm install 20
+            - nvm use 20
+            - npm ci --legacy-peer-deps
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
