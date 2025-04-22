@@ -1,8 +1,6 @@
-// next.config.js  (raiz do projecto)
-module.exports = {
-  eslint: {
-    // faz o build ignorar erros de lint
-    ignoreDuringBuilds: true,
-  },
-  trailingSlash: false,
-}
+// next.config.js
+ module.exports = {
+   eslint: { ignoreDuringBuilds: true },
+   trailingSlash: false,
++  output: 'export',
+ }
