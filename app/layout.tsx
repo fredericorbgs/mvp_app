@@ -1,15 +1,16 @@
 // app/layout.tsx
-import "./globals.css";  // importa o tailwind + seu theme
+import './globals.css';
+import { ReactNode } from 'react';
 
-export const metadata = {
-  title: "Rivo MVP",
-  description: "Upload e RAG",
-};
+interface RootLayoutProps {
+  children: ReactNode;
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <head />
+      <body className="bg-gray-100 text-gray-900">{children}</body>
     </html>
   );
 }
