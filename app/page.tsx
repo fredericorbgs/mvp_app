@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, ChangeEvent } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,10 +16,6 @@ interface FileMeta {
   descricao?: string;
   dataUpload: string;
   tamanho: number;
-}
-
-interface AskResponse {
-  text: string;
 }
 
 export default function MVPApp() {
@@ -52,59 +48,49 @@ export default function MVPApp() {
   );
 }
 
-// … mantenha exatamente sua lógica de FileUpload e FileList,
-// só troque o endpoint /api/... para `${API_BASE_URL}/upload` e `${API_BASE_URL}/files`
-
 function FileUpload({ onSuccess }: { onSuccess?: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [descricao, setDescricao] = useState('');
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState('\u00A0');
+  const [msg, setMsg] = useState<string>('\u00A0');
 
-
-  const handleUpload = async () => {
+  async function handleUpload() {
     if (!file) {
       setMsg('Selecione um arquivo.');
       return;
     }
-  
     setLoading(true);
     setMsg('Enviando…');
-  
+
     try {
-      // 1) converte o File em string Base64
+      // Converter arquivo em Base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
-          const result = reader.result as string;        // ex: “data:application/pdf;base64,JVBERi0xLjc…”
-          const [, payload] = result.split(',');         // pega só a parte após a vírgula
+          const result = reader.result as string;
+          const [, payload] = result.split(',');
           resolve(payload);
         };
-        reader.onerror = (err) => reject(err);
+        reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-  
-      // 2) monta o JSON
+
       const payload = {
         fileName: file.name,
         fileContentBase64: base64,
-        // descricao,   // se quiser mandar a descrição também, basta descomentar
+        descricao: descricao || undefined,
       };
-  
-      // 3) dispara o fetch para o API Gateway /main/uploadFile
-      const res = await fetch(
-        `${API_BASE_URL}/main/uploadFile`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
-  
+
+      const res = await fetch(`${API_BASE_URL}/main/uploadFile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
       if (!res.ok) {
         throw new Error(`Upload falhou com status ${res.status}`);
       }
-  
+
       setMsg('✅ Upload concluído');
       setFile(null);
       setDescricao('');
@@ -115,8 +101,7 @@ function FileUpload({ onSuccess }: { onSuccess?: () => void }) {
     } finally {
       setLoading(false);
     }
-  };
-  };
+  }
 
   return (
     <Card className="max-w-xl mx-auto">
@@ -140,14 +125,16 @@ function FileUpload({ onSuccess }: { onSuccess?: () => void }) {
 function FileList() {
   const [files, setFiles] = useState<FileMeta[]>([]);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    fetch(`${API_BASE_URL}/files`)
+    fetch(`${API_BASE_URL}/main/listFiles`)
       .then((r) => r.json())
-      .then((js) => setFiles(js))
+      .then((js: FileMeta[]) => setFiles(js))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <p>Carregando…</p>;
+
   return (
     <Card className="max-w-4xl mx-auto">
       <CardContent className="overflow-x-auto p-0">
@@ -166,16 +153,16 @@ function FileList() {
               <tr key={f.s3_key} className="odd:bg-gray-50">
                 <td className="px-3 py-2">{f.nome}</td>
                 <td className="px-3 py-2">{f.descricao || '-'}</td>
-                <td className="px-3 py-2">
-                  {new Date(f.dataUpload).toLocaleString()}
-                </td>
+                <td className="px-3 py-2">{new Date(f.dataUpload).toLocaleString()}</td>
                 <td className="px-3 py-2">{(f.tamanho / 1024).toFixed(1)}</td>
                 <td className="px-3 py-2">
                   <Button
                     size="sm"
                     onClick={() =>
                       window.open(
-                        `${API_BASE_URL}/download?key=${encodeURIComponent(f.s3_key)}`,
+                        `${API_BASE_URL}/main/downloadFile?key=${encodeURIComponent(
+                          f.s3_key
+                        )}`,
                         '_blank'
                       )
                     }
@@ -196,24 +183,25 @@ function ChatRAG() {
   const [q, setQ] = useState('');
   const [ans, setAns] = useState('Pergunte algo e a IA responderá aqui…');
   const [loading, setLoading] = useState(false);
-  const ask = async () => {
+
+  async function ask() {
     if (!q.trim()) return;
     setLoading(true);
     setAns('Consultando KB…');
     try {
-      const res = await fetch(`${API_BASE_URL}/ask`, {
+      const res = await fetch(`${API_BASE_URL}/main/askRAG`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q }),
       });
-      const js = await res.json();
+      const js = await res.json() as { text: string };
       setAns(js.text);
     } catch {
       setAns('Erro ao consultar.');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
     <Card className="max-w-2xl mx-auto">
