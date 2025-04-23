@@ -1,9 +1,8 @@
-# amplify.yml
 version: 1
 applications:
-  - appRoot: .                 # raiz do seu repo (onde está o package.json)
+  - appRoot: .
     frontend:
-      framework: nextjs        # declara o framework Next.js para pular a detecção
+      framework: nextjs
       phases:
         preBuild:
           commands:
@@ -12,9 +11,9 @@ applications:
             - npm ci --legacy-peer-deps
         build:
           commands:
-            - npm run build    # já faz next build && next export
+            - npm run build
       artifacts:
-        baseDirectory: out      # pasta gerada pelo next export
+        baseDirectory: out
         files:
           - '**/*'
       cache:
