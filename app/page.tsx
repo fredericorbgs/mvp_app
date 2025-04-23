@@ -81,7 +81,7 @@ function FileUpload({ onSuccess }: { onSuccess?: () => void }) {
         descricao: descricao || undefined,
       };
 
-      const res = await fetch(`${API_BASE_URL}/main/uploadFile`, {
+      const res = await fetch(`${API_BASE_URL}/main/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
