@@ -81,7 +81,7 @@ function FileUpload({ onSuccess }: { onSuccess?: () => void }) {
         descricao: descricao || undefined,
       };
 
-      const res = await fetch(`${API_BASE_URL}/main/upload`, {
+      const res = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -127,7 +127,7 @@ function FileList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/main/listFiles`)
+    fetch(`${API_BASE_URL}/list`)
       .then((r) => r.json())
       .then((js: FileMeta[]) => setFiles(js))
       .finally(() => setLoading(false));
@@ -189,7 +189,7 @@ function ChatRAG() {
     setLoading(true);
     setAns('Consultando KB…');
     try {
-      const res = await fetch(`${API_BASE_URL}/main/askRAG`, {
+      const res = await fetch(`${API_BASE_URL}/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q }),
