@@ -61,25 +61,61 @@ function FileUpload({ onSuccess }: { onSuccess?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('\u00A0');
 
+
   const handleUpload = async () => {
-    if (!file) return setMsg('Selecione um arquivo.');
+    if (!file) {
+      setMsg('Selecione um arquivo.');
+      return;
+    }
+  
     setLoading(true);
     setMsg('Enviando…');
-    const form = new FormData();
-    form.append('file', file);
-    form.append('descricao', descricao);
+  
     try {
-      const res = await fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: form });
-      if (!res.ok) throw new Error(`Status ${res.status}`);
+      // 1) converte o File em string Base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;        // ex: “data:application/pdf;base64,JVBERi0xLjc…”
+          const [, payload] = result.split(',');         // pega só a parte após a vírgula
+          resolve(payload);
+        };
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(file);
+      });
+  
+      // 2) monta o JSON
+      const payload = {
+        fileName: file.name,
+        fileContentBase64: base64,
+        // descricao,   // se quiser mandar a descrição também, basta descomentar
+      };
+  
+      // 3) dispara o fetch para o API Gateway /main/uploadFile
+      const res = await fetch(
+        `${API_BASE_URL}/main/uploadFile`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+  
+      if (!res.ok) {
+        throw new Error(`Upload falhou com status ${res.status}`);
+      }
+  
       setMsg('✅ Upload concluído');
       setFile(null);
       setDescricao('');
       onSuccess?.();
-    } catch {
+    } catch (error) {
+      console.error(error);
       setMsg('Erro ao enviar arquivo');
     } finally {
       setLoading(false);
     }
+  };
   };
 
   return (
