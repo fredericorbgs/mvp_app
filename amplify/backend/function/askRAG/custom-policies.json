@@ -1,0 +1,14 @@
+[
+  {
+    "Effect": "Allow",
+    "Action": [
+      "bedrock:Retrieve",
+      "bedrock:RetrieveAndGenerate",
+      "bedrock:GetKnowledgeBase",
+      "bedrock:InvokeModel"
+    ],
+    "Resource": [
+      "arn:aws:bedrock:us-east-1:123456789012:knowledge-base/ZRUGFU8YFX"
+    ]
+  }
+]

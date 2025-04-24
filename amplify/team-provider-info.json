@@ -1,0 +1,42 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-mvpapp-dev-7674c-authRole",
+      "UnauthRoleArn": "arn:aws:iam::344887510673:role/amplify-mvpapp-dev-7674c-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::344887510673:role/amplify-mvpapp-dev-7674c-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-mvpapp-dev-7674c-deployment",
+      "UnauthRoleName": "amplify-mvpapp-dev-7674c-unauthRole",
+      "StackName": "amplify-mvpapp-dev-7674c",
+      "StackId": "arn:aws:cloudformation:us-east-1:344887510673:stack/amplify-mvpapp-dev-7674c/32223140-214f-11f0-a571-0eee238d1ab1",
+      "AmplifyAppId": "d11tapnzq0eyg3"
+    },
+    "categories": {
+      "auth": {
+        "mvpappbb35db9f": {}
+      },
+      "storage": {
+        "mvpapp79433f96": {
+          "bucketName": "testespetrobrasv1",
+          "region": "us-east-1"
+        }
+      },
+      "function": {
+        "uploadFiles": {
+          "deploymentBucketName": "amplify-mvpapp-dev-7674c-deployment",
+          "s3Key": "amplify-builds/uploadFiles-7950454f686d6b784777-build.zip"
+        },
+        "listFiles": {
+          "deploymentBucketName": "amplify-mvpapp-dev-7674c-deployment",
+          "s3Key": "amplify-builds/listFiles-737a5a71775239654263-build.zip"
+        },
+        "askRAG": {
+          "kbId": "Z5UQP76KSQ",
+          "modelArn": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-7-sonnet-20250219-v1:0",
+          "deploymentBucketName": "amplify-mvpapp-dev-7674c-deployment",
+          "s3Key": "amplify-builds/askRAG-6d4a474a796368494169-build.zip"
+        }
+      }
+    }
+  }
+}

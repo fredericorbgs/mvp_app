@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "auth": {
+      "mvpappbb35db9f": [
+        "create",
+        "read",
+        "update",
+        "delete"
+      ]
+    },
+    "storage": {
+      "mvpapp79433f96": [
+        "create",
+        "read",
+        "update",
+        "delete"
+      ]
+    },
+    "function": {
+      "uploadFiles": [
+        "create",
+        "read",
+        "update",
+        "delete"
+      ],
+      "listFiles": [
+        "create",
+        "read",
+        "update",
+        "delete"
+      ]
+    }
+  },
+  "lambdaLayers": [],
+  "environmentVariableList": [
+    {
+      "cloudFormationParameterName": "kbId",
+      "environmentVariableName": "KB_ID"
+    },
+    {
+      "cloudFormationParameterName": "modelArn",
+      "environmentVariableName": "MODEL_ARN"
+    }
+  ]
+}

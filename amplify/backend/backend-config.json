@@ -1,0 +1,204 @@
+{
+  "auth": {
+    "mvpappbb35db9f": {
+      "customAuth": false,
+      "dependsOn": [],
+      "frontendAuthConfig": {
+        "mfaConfiguration": "OFF",
+        "mfaTypes": [
+          "SMS"
+        ],
+        "passwordProtectionSettings": {
+          "passwordPolicyCharacters": [],
+          "passwordPolicyMinLength": 8
+        },
+        "signupAttributes": [
+          "EMAIL"
+        ],
+        "socialProviders": [],
+        "usernameAttributes": [],
+        "verificationMechanisms": [
+          "EMAIL"
+        ]
+      },
+      "providerPlugin": "awscloudformation",
+      "service": "Cognito"
+    }
+  },
+  "function": {
+    "askRAG": {
+      "build": true,
+      "dependsOn": [
+        {
+          "attributes": [
+            "UserPoolId"
+          ],
+          "category": "auth",
+          "resourceName": "mvpappbb35db9f"
+        },
+        {
+          "attributes": [
+            "BucketName"
+          ],
+          "category": "storage",
+          "resourceName": "mvpapp79433f96"
+        },
+        {
+          "attributes": [
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "uploadFiles"
+        },
+        {
+          "attributes": [
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "listFiles"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "listFiles": {
+      "build": true,
+      "dependsOn": [
+        {
+          "attributes": [
+            "UserPoolId"
+          ],
+          "category": "auth",
+          "resourceName": "mvpappbb35db9f"
+        },
+        {
+          "attributes": [
+            "BucketName"
+          ],
+          "category": "storage",
+          "resourceName": "mvpapp79433f96"
+        },
+        {
+          "attributes": [
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "uploadFiles"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "uploadFiles": {
+      "build": true,
+      "dependsOn": [
+        {
+          "attributes": [
+            "UserPoolId"
+          ],
+          "category": "auth",
+          "resourceName": "mvpappbb35db9f"
+        },
+        {
+          "attributes": [
+            "BucketName"
+          ],
+          "category": "storage",
+          "resourceName": "mvpapp79433f96"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    }
+  },
+  "parameters": {
+    "AMPLIFY_function_askRAG_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "askRAG"
+        }
+      ]
+    },
+    "AMPLIFY_function_askRAG_kbId": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "askRAG"
+        }
+      ]
+    },
+    "AMPLIFY_function_askRAG_modelArn": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "askRAG"
+        }
+      ]
+    },
+    "AMPLIFY_function_askRAG_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "askRAG"
+        }
+      ]
+    },
+    "AMPLIFY_function_listFiles_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "listFiles"
+        }
+      ]
+    },
+    "AMPLIFY_function_listFiles_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "listFiles"
+        }
+      ]
+    },
+    "AMPLIFY_function_uploadFiles_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "uploadFiles"
+        }
+      ]
+    },
+    "AMPLIFY_function_uploadFiles_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "uploadFiles"
+        }
+      ]
+    },
+    "AMPLIFY_storage_mvpapp79433f96_bucketName": {
+      "usedBy": [
+        {
+          "category": "storage",
+          "resourceName": "mvpapp79433f96"
+        }
+      ]
+    },
+    "AMPLIFY_storage_mvpapp79433f96_region": {
+      "usedBy": [
+        {
+          "category": "storage",
+          "resourceName": "mvpapp79433f96"
+        }
+      ]
+    }
+  },
+  "storage": {
+    "mvpapp79433f96": {
+      "dependsOn": [],
+      "providerPlugin": "awscloudformation",
+      "service": "S3",
+      "serviceType": "imported"
+    }
+  }
+}
